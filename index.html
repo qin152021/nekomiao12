@@ -1,0 +1,2405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>喵ちゃん的个人主页</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 已移除LeanCloud SDK -->
+    <style>
+        /* 连接状态指示器 */
+        .connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .connection-online {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .connection-offline {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        /* 加载页面 */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--light-bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loading-content {
+            text-align: center;
+        }
+        
+        .loading-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .loading-subtext {
+            font-size: 16px;
+            color: var(--accent-color);
+        }
+        
+        /* 主内容 */
+        .main-content {
+            display: none;
+            flex: 1;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        /* 头像 */
+        .avatar-container {
+            margin-bottom: 20px;
+        }
+        
+        .avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--primary-color);
+        }
+        
+        /* 名字和欢迎语 */
+        .name {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .welcome {
+            font-size: 18px;
+            margin-bottom: 30px;
+            color: var(--accent-color);
+        }
+        
+        /* 社交链接 */
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+        
+        .social-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 15px;
+            border: var(--border);
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .social-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow);
+        }
+        
+        .social-btn i {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .qq-btn {
+            color: #12B7F5;
+        }
+        
+        .wechat-btn {
+            color: #07C160;
+        }
+        
+        .tiktok-btn {
+            color: #000000;
+        }
+        
+        /* 页脚 */
+        footer {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            border: var(--border);
+        }
+        
+        .footer-text {
+            line-height: 1.8;
+        }
+        
+        /* 功能按钮 - 重新布局：留言板在右下角，开发者模式在左下角，控制台在开发者模式上方 */
+        .dev-btn, .console-btn, .message-board-btn {
+            position: fixed;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            border: var(--border);
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+        
+        /* 留言板按钮在右下角 */
+        .message-board-btn {
+            bottom: 20px;
+            right: 20px;
+        }
+        
+        /* 开发者模式按钮在左下角 */
+        .dev-btn {
+            bottom: 20px;
+            left: 20px;
+        }
+        
+        /* 控制台按钮在开发者模式上方 */
+        .console-btn {
+            bottom: 90px;
+            left: 20px;
+        }
+        
+        .dev-btn:hover, .console-btn:hover, .message-board-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow);
+        }
+        
+        .dev-btn i, .console-btn i, .message-board-btn i {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        
+        /* 模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal-content, .dev-content, .console-content, .message-board-content, .user-setup-content {
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            border: var(--border);
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--accent-color);
+        }
+        
+        .modal-title {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        /* 二维码图片 */
+        .qr-image {
+            width: 100%;
+            max-width: 300px;
+            margin: 20px auto;
+            display: block;
+            border-radius: 10px;
+            border: var(--border);
+        }
+        
+        /* 开发者模式输入 */
+        .dev-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: var(--border);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+        }
+        
+        .dev-btn-primary {
+            background-color: var(--primary-color);
+            color: var(--secondary-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .dev-btn-primary:hover {
+            opacity: 0.9;
+        }
+        
+        .dev-btn-secondary {
+            background-color: var(--light-bg);
+            color: var(--text-color);
+            border: var(--border);
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+        
+        .dev-btn-secondary:hover {
+            background-color: #e0e0e0;
+        }
+        
+        /* 开发者模式部分 */
+        .dev-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .dev-title {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .dev-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .image-preview {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 10px;
+            border-radius: 5px;
+            border: var(--border);
+        }
+        
+        /* 控制台 */
+        .console-output {
+            background-color: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            border: var(--border);
+        }
+        
+        .debug-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            border: var(--border);
+        }
+        
+        .debug-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .debug-commands {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .debug-btn {
+            background-color: var(--card-bg);
+            border: var(--border);
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .debug-btn:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .console-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .clear-console-btn, .close-console-btn {
+            flex: 1;
+            padding: 10px;
+            border: var(--border);
+            background-color: var(--card-bg);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .clear-console-btn:hover, .close-console-btn:hover {
+            background-color: #e0e0e0;
+        }
+        
+        /* 留言板样式 - 重新设计为微信风格 */
+        .message-board-content {
+            display: flex;
+            flex-direction: column;
+            height: 85vh;
+            padding: 0;
+            max-width: 800px;
+            width: 95%;
+        }
+        
+        .message-board-header {
+            padding: 15px 20px;
+            border-bottom: var(--border);
+            background-color: var(--card-bg);
+            border-radius: 15px 15px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .message-board-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .user-info-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background-color: var(--light-bg);
+            border-bottom: var(--border);
+        }
+        
+        .user-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary-color);
+        }
+        
+        .user-name {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .message-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #f0f0f0;
+        }
+        
+        .message-item {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message-bubble {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            position: relative;
+            word-wrap: break-word;
+        }
+        
+        .message-own {
+            align-self: flex-end;
+            background-color: #95ec69;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .message-other {
+            align-self: flex-start;
+            background-color: white;
+            border-bottom-left-radius: 5px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .message-avatar {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 8px;
+        }
+        
+        .message-username {
+            font-weight: bold;
+        }
+        
+        .message-time {
+            margin-left: 10px;
+            font-size: 10px;
+        }
+        
+        .message-content {
+            line-height: 1.4;
+            font-size: 14px;
+        }
+        
+        .message-image {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 10px;
+            margin-top: 5px;
+            object-fit: contain;
+        }
+        
+        .message-actions-bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+            padding: 0 5px;
+        }
+        
+        .reply-btn, .delete-btn {
+            background: none;
+            border: none;
+            color: var(--accent-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .reply-btn:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .delete-btn:hover {
+            background-color: #ffebee;
+            color: #f44336;
+        }
+        
+        .reply-area {
+            margin-top: 10px;
+            padding-left: 10px;
+            border-left: 2px solid #e0e0e0;
+        }
+        
+        .reply-list {
+            margin-top: 8px;
+        }
+        
+        .reply-item {
+            margin-bottom: 8px;
+        }
+        
+        .reply-bubble {
+            padding: 8px 12px;
+            border-radius: 12px;
+            background-color: white;
+            border: 1px solid #e0e0e0;
+            max-width: 90%;
+        }
+        
+        .reply-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        
+        .reply-avatar {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 6px;
+        }
+        
+        .reply-username {
+            font-weight: bold;
+            font-size: 11px;
+            margin-right: 8px;
+        }
+        
+        .reply-time {
+            font-size: 9px;
+            color: var(--accent-color);
+        }
+        
+        .reply-content {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .message-input-area {
+            padding: 15px;
+            background-color: var(--card-bg);
+            border-top: var(--border);
+            border-radius: 0 0 15px 15px;
+        }
+        
+        .reply-indicator {
+            display: none;
+            background-color: #e3f2fd;
+            padding: 8px 12px;
+            border-radius: 5px;
+            margin-bottom: 8px;
+            border: 1px solid #2196f3;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+        
+        .cancel-reply {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #f44336;
+        }
+        
+        .message-input-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+        }
+        
+        .message-textarea {
+            flex: 1;
+            padding: 10px 15px;
+            border: var(--border);
+            border-radius: 20px;
+            resize: none;
+            min-height: 40px;
+            max-height: 120px;
+            font-family: inherit;
+            font-size: 14px;
+            background-color: var(--light-bg);
+        }
+        
+        .message-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .image-upload-btn {
+            background-color: var(--card-bg);
+            border: var(--border);
+            padding: 8px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+        }
+        
+        .image-upload-btn:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .submit-message-btn {
+            background-color: var(--primary-color);
+            color: var(--secondary-color);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            height: 40px;
+            font-size: 14px;
+        }
+        
+        .submit-message-btn:hover {
+            opacity: 0.9;
+        }
+        
+        .submit-message-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        #message-image-preview {
+            max-height: 80px;
+            overflow: hidden;
+            margin-top: 8px;
+            text-align: center;
+        }
+        
+        #message-image-preview img {
+            max-width: 100%;
+            max-height: 80px;
+            object-fit: contain;
+            border-radius: 10px;
+            border: var(--border);
+        }
+        
+        /* 用户设置模态框 */
+        .user-setup-title {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .user-setup-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .avatar-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto;
+            border: 3px solid var(--primary-color);
+        }
+        
+        .avatar-upload-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background-color: var(--light-bg);
+            border: var(--border);
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .avatar-upload-btn:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .user-setup-input {
+            width: 100%;
+            padding: 10px;
+            border: var(--border);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+        }
+        
+        .user-setup-btn {
+            background-color: var(--primary-color);
+            color: var(--secondary-color);
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .user-setup-btn:hover {
+            opacity: 0.9;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .social-links {
+                flex-wrap: wrap;
+            }
+            
+            .dev-btn, .console-btn, .message-board-btn {
+                position: fixed;
+                margin: 0;
+            }
+            
+            .message-board-btn {
+                bottom: 20px;
+                right: 20px;
+            }
+            
+            .dev-btn {
+                bottom: 20px;
+                left: 20px;
+            }
+            
+            .console-btn {
+                bottom: 90px;
+                left: 20px;
+            }
+            
+            .modal-content, .dev-content, .console-content, .message-board-content, .user-setup-content {
+                padding: 15px;
+            }
+            
+            .message-board-content {
+                height: 90vh;
+                width: 98%;
+            }
+            
+            .message-bubble {
+                max-width: 85%;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .message-board-content {
+                height: 92vh;
+            }
+            
+            .message-bubble {
+                max-width: 90%;
+            }
+            
+            .user-info-bar {
+                padding: 8px 12px;
+            }
+            
+            .user-avatar {
+                width: 30px;
+                height: 30px;
+            }
+            
+            .user-name {
+                font-size: 13px;
+            }
+            
+            .message-input-container {
+                padding: 0;
+            }
+            
+            .message-textarea {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+            
+            .image-upload-btn, .submit-message-btn {
+                width: 36px;
+                height: 36px;
+                padding: 6px;
+            }
+            
+            .submit-message-btn {
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+        }
+        
+        /* 平板和电脑优化 */
+        @media (min-width: 769px) {
+            .message-board-content {
+                width: 80%;
+                max-width: 900px;
+            }
+        }
+        
+        /* 变量定义 */
+        :root {
+            --primary-color: #000000;
+            --secondary-color: #ffffff;
+            --accent-color: #333333;
+            --text-color: #000000;
+            --light-bg: #f5f5f5;
+            --card-bg: #ffffff;
+            --shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            --border: 1px solid #000000;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background-color: var(--light-bg);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+    </style>
+</head>
+<body>
+    <!-- 连接状态指示器 -->
+    <div class="connection-status" id="connection-status"></div>
+    
+    <!-- 加载页面 -->
+    <div class="loading-screen" id="loading-screen">
+        <div class="loading-content">
+            <div class="loading-icon">
+                <i class="fas fa-spinner"></i>
+            </div>
+            <div class="loading-text" id="loading-text">正在加载...</div>
+            <div class="loading-subtext" id="loading-subtext">请稍候</div>
+        </div>
+    </div>
+    
+    <!-- 主内容 -->
+    <div class="main-content" id="main-content">
+        <div class="container">
+            <header>
+                <div class="avatar-container">
+                    <img src="" alt="喵ちゃん头像" class="avatar" id="avatar">
+                </div>
+                <h1 class="name" id="name">喵ちゃん</h1>
+                <p class="welcome" id="welcome">欢迎访问我的个人主页</p>
+                
+                <div class="social-links">
+                    <button class="social-btn qq-btn" id="qq-btn">
+                        <i class="fab fa-qq"></i>
+                        <span>QQ</span>
+                    </button>
+                    <button class="social-btn wechat-btn" id="wechat-btn">
+                        <i class="fab fa-weixin"></i>
+                        <span>微信</span>
+                    </button>
+                    <button class="social-btn tiktok-btn" id="tiktok-btn">
+                        <i class="fab fa-tiktok"></i>
+                        <span>抖音</span>
+                    </button>
+                </div>
+            </header>
+            
+            <footer>
+                <div class="footer-text" id="footer-text">
+                    这里可以放置个人简介或其他内容... 这是一个示例文本，您可以在开发者模式中修改这里的内容。
+                </div>
+            </footer>
+        </div>
+        
+        <!-- 重新布局按钮：留言板在右下角，开发者模式在左下角，控制台在开发者模式上方 -->
+        <button class="message-board-btn" id="message-board-btn">
+            <i class="fas fa-comments"></i>
+            <span>留言板</span>
+        </button>
+        
+        <!-- 开发者模式按钮 -->
+        <button class="dev-btn" id="dev-mode-btn">
+            <i class="fas fa-code"></i>
+            <span>开发者模式</span>
+        </button>
+        
+        <!-- 控制台按钮 -->
+        <button class="console-btn" id="console-btn">
+            <i class="fas fa-terminal"></i>
+            <span>控制台</span>
+        </button>
+    </div>
+    
+    <!-- 控制台模态框 -->
+    <div class="modal" id="console-modal">
+        <div class="console-content">
+            <span class="close-btn" id="console-close">&times;</span>
+            <h2 class="modal-title">控制台</h2>
+            
+            <div class="console-output" id="console-output">
+                <!-- 控制台输出将动态添加到这里 -->
+            </div>
+            
+            <div class="debug-section">
+                <div class="debug-title">数据管理</div>
+                <div class="debug-commands">
+                    <button class="debug-btn" id="check-local-data-btn">检查本地数据</button>
+                    <button class="debug-btn" id="check-messages-btn">检查留言数据</button>
+                    <button class="debug-btn" id="check-cloud-data-btn">检查云端数据</button>
+                    <button class="debug-btn" id="reset-local-data-btn">重置所有数据</button>
+                </div>
+            </div>
+            
+            <div class="console-actions">
+                <button class="clear-console-btn" id="clear-console-btn">清除</button>
+                <button class="close-console-btn" id="close-console-btn">关闭</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 社交平台模态框 -->
+    <div class="modal" id="qq-modal">
+        <div class="modal-content">
+            <span class="close-btn" id="qq-close">&times;</span>
+            <h2>QQ添加好友</h2>
+            <img src="" alt="QQ二维码" class="qr-image" id="qq-image">
+            <p>点击下方按钮跳转到QQ</p>
+            <a href="https://qm.qq.com/cgi-bin/qm/qr?k=XAyvfgJN-X72qjVsoLFWEpq2j3IFwmSm#" target="_blank" class="social-btn qq-btn">点击转跳到QQ，添加好友</a>
+            <p class="loading-subtext">若链接失效请手动添加好友</p>
+        </div>
+    </div>
+    
+    <div class="modal" id="wechat-modal">
+        <div class="modal-content">
+            <span class="close-btn" id="wechat-close">&times;</span>
+            <h2>微信添加好友</h2>
+            <img src="" alt="微信二维码" class="qr-image" id="wechat-image">
+            <p>扫码添加好友</p>
+        </div>
+    </div>
+    
+    <div class="modal" id="tiktok-modal">
+        <div class="modal-content">
+            <span class="close-btn" id="tiktok-close">&times;</span>
+            <h2>抖音关注</h2>
+            <img src="" alt="抖音二维码" class="qr-image" id="tiktok-image">
+            <p>扫码关注我的抖音</p>
+        </div>
+    </div>
+    
+    <!-- 密码验证模态框 -->
+    <div class="modal" id="password-modal">
+        <div class="modal-content">
+            <h2>开发者模式</h2>
+            <p>请输入密码进入开发者模式</p>
+            <input type="password" class="dev-input" id="password-input" placeholder="请输入密码">
+            <button class="dev-btn-primary" id="password-btn">确认</button>
+        </div>
+    </div>
+    
+    <div class="modal" id="console-password-modal">
+        <div class="modal-content">
+            <h2>控制台</h2>
+            <p>请输入密码进入控制台</p>
+            <input type="password" class="dev-input" id="console-password-input" placeholder="请输入密码">
+            <button class="dev-btn-primary" id="console-password-btn">确认</button>
+        </div>
+    </div>
+    
+    <!-- 开发者模式模态框 -->
+    <div class="modal" id="dev-modal">
+        <div class="dev-content">
+            <h2><i class="fas fa-cogs"></i> 开发者模式</h2>
+            
+            <div class="dev-section">
+                <h3 class="dev-title"><i class="fas fa-user"></i> 基本信息</h3>
+                
+                <!-- 修改：去除头像预览，直接上传 -->
+                <label class="dev-label">头像:</label>
+                <input type="file" id="avatar-upload" class="dev-input" accept="image/*">
+                
+                <label class="dev-label">名字:</label>
+                <input type="text" id="dev-name" class="dev-input" placeholder="输入名字">
+                
+                <label class="dev-label">欢迎语:</label>
+                <input type="text" id="dev-welcome" class="dev-input" placeholder="输入欢迎语">
+                
+                <label class="dev-label">公告:</label>
+                <textarea id="dev-footer" class="dev-input" placeholder="输入公告文本" rows="4"></textarea>
+            </div>
+            
+            <div class="dev-section">
+                <h3 class="dev-title"><i class="fas fa-images"></i> 社交平台图片</h3>
+                
+                <label class="dev-label">QQ二维码:</label>
+                <input type="file" id="qq-upload" class="dev-input" accept="image/*">
+                <img src="" alt="QQ二维码预览" class="image-preview" id="qq-preview">
+                
+                <label class="dev-label">微信二维码:</label>
+                <input type="file" id="wechat-upload" class="dev-input" accept="image/*">
+                <img src="" alt="微信二维码预览" class="image-preview" id="wechat-preview">
+                
+                <label class="dev-label">抖音二维码:</label>
+                <input type="file" id="tiktok-upload" class="dev-input" accept="image/*">
+                <img src="" alt="抖音二维码预览" class="image-preview" id="tiktok-preview">
+            </div>
+            
+            <div class="dev-section">
+                <h3 class="dev-title"><i class="fas fa-paint-roller"></i> 背景设置</h3>
+                
+                <label class="dev-label">主页背景:</label>
+                <input type="file" id="bg-upload" class="dev-input" accept="image/*">
+                <img src="" alt="主页背景预览" class="image-preview" id="bg-preview">
+                
+                <label class="dev-label">加载页面背景:</label>
+                <input type="file" id="loading-bg-upload" class="dev-input" accept="image/*">
+                <img src="" alt="加载页面背景预览" class="image-preview" id="loading-bg-preview">
+                
+                <label class="dev-label">加载文本:</label>
+                <input type="text" id="loading-text-input" class="dev-input" placeholder="输入加载文本">
+                
+                <label class="dev-label">加载副文本:</label>
+                <input type="text" id="loading-subtext-input" class="dev-input" placeholder="输入加载副文本">
+            </div>
+            
+            <div class="dev-section">
+                <h3 class="dev-title"><i class="fas fa-key"></i> 密码设置</h3>
+                <label class="dev-label">原密码:</label>
+                <input type="password" id="old-password" class="dev-input" placeholder="输入原密码">
+                
+                <label class="dev-label">新密码:</label>
+                <input type="password" id="new-password" class="dev-input" placeholder="输入新密码">
+                
+                <label class="dev-label">确认新密码:</label>
+                <input type="password" id="confirm-password" class="dev-input" placeholder="再次输入新密码">
+                
+                <button class="dev-btn-primary" id="change-password-btn"><i class="fas fa-key"></i> 更改密码</button>
+            </div>
+            
+            <div class="dev-section">
+                <h3 class="dev-title"><i class="fas fa-cloud"></i> 云端数据管理</h3>
+                <button class="dev-btn-primary" id="save-to-cloud-btn"><i class="fas fa-cloud-upload-alt"></i> 上传数据到云端</button>
+                <button class="dev-btn-secondary" id="load-from-cloud-btn"><i class="fas fa-cloud-download-alt"></i> 从云端加载数据</button>
+                <button class="dev-btn-secondary" id="clear-cloud-data-btn"><i class="fas fa-trash"></i> 清空云端数据</button>
+            </div>
+            
+            <button class="dev-btn-primary" id="save-btn"><i class="fas fa-save"></i> 保存更改</button>
+            <button class="dev-btn-secondary" id="close-dev"><i class="fas fa-times"></i> 关闭</button>
+        </div>
+    </div>
+    
+    <!-- 留言板模态框 - 重新设计为微信风格 -->
+    <div class="modal" id="message-board-modal">
+        <div class="message-board-content">
+            <div class="message-board-header">
+                <h2 class="message-board-title">留言板</h2>
+                <span class="close-btn" id="message-board-close">&times;</span>
+            </div>
+            
+            <!-- 用户信息栏 -->
+            <div class="user-info-bar">
+                <div class="user-display" id="user-display">
+                    <img src="" alt="用户头像" class="user-avatar" id="current-user-avatar">
+                    <span class="user-name" id="current-user-name">未设置</span>
+                </div>
+                <button class="social-btn" id="user-setup-btn">
+                    <i class="fas fa-user-edit"></i>
+                    <span>设置头像昵称</span>
+                </button>
+            </div>
+            
+            <!-- 留言列表 -->
+            <div class="message-list" id="message-list">
+                <!-- 留言将动态添加到这里 -->
+            </div>
+            
+            <!-- 留言输入区域 -->
+            <div class="message-input-area">
+                <div class="reply-indicator" id="reply-indicator">
+                    <span id="reply-indicator-text">正在回复：</span>
+                    <button class="cancel-reply" id="cancel-reply-btn">✕</button>
+                </div>
+                <div class="message-input-container">
+                    <input type="file" id="message-image-upload" accept="image/*" style="display: none;">
+                    <button class="image-upload-btn" id="message-image-btn" title="添加图片">
+                        <i class="fas fa-image"></i>
+                    </button>
+                    <textarea class="message-textarea" id="message-text" placeholder="请输入留言内容..."></textarea>
+                    <button class="submit-message-btn" id="submit-message-btn">发送</button>
+                </div>
+                <div id="message-image-preview"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 用户设置模态框 -->
+    <div class="modal" id="user-setup-modal">
+        <div class="user-setup-content">
+            <span class="close-btn" id="user-setup-close">&times;</span>
+            <h2 class="user-setup-title">设置头像和昵称</h2>
+            
+            <div class="user-setup-form">
+                <img src="" alt="头像预览" class="avatar-preview" id="user-avatar-preview">
+                
+                <input type="file" id="user-avatar-upload" accept="image/*" style="display: none;">
+                <button class="avatar-upload-btn" id="user-avatar-btn">
+                    <i class="fas fa-upload"></i>
+                    <span>上传头像</span>
+                </button>
+                
+                <input type="text" class="user-setup-input" id="user-name-input" placeholder="请输入昵称">
+                
+                <button class="user-setup-btn" id="save-user-info-btn">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 删除确认模态框 -->
+    <div class="modal" id="delete-confirm-modal">
+        <div class="modal-content">
+            <h2>删除留言</h2>
+            <p>请输入开发者密码以删除此留言</p>
+            <input type="password" class="dev-input" id="delete-password-input" placeholder="请输入密码">
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="dev-btn-primary" id="confirm-delete-btn">确认删除</button>
+                <button class="dev-btn-secondary" id="cancel-delete-btn">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================== 应用状态 ==============================
+        const AppState = {
+            websiteDataLoaded: false,
+            devPassword: localStorage.getItem('devPassword') || '152021',
+            consoleLogs: [],
+            isReplying: false,
+            replyingTo: null,
+            connectionStatus: 'online',
+            isSubmittingMessage: false,
+            lastMessageTime: 0,
+            apiBase: '/.netlify/functions'
+        };
+
+        // 留言板相关功能
+        let currentUser = {
+            avatar: '',
+            name: ''
+        };
+        
+        let messages = [];
+        let currentMessageIdToDelete = null;
+
+        // ============================== 工具函数 ==============================
+        function consoleLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+            AppState.consoleLogs.push(logEntry);
+            
+            const consoleOutput = document.getElementById('console-output');
+            if (consoleOutput) {
+                consoleOutput.textContent = AppState.consoleLogs.join('\n');
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
+            
+            if (type === 'error') {
+                console.error(message);
+            } else if (type === 'warn') {
+                console.warn(message);
+            } else {
+                console.log(message);
+            }
+        }
+
+        function updateConnectionStatus() {
+            const statusElement = document.getElementById('connection-status');
+            statusElement.textContent = '在线（自托管模式）';
+            statusElement.className = 'connection-status connection-online';
+        }
+
+        // ============================== 数据存取函数（新） ==============================
+        async function loadWebsiteConfig() {
+            consoleLog('正在从自托管后端加载网站配置...', 'info');
+            try {
+                const response = await fetch(`${AppState.apiBase}/admin-load`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    applyDataToPage(result.data);
+                    consoleLog('网站配置加载成功', 'info');
+                } else {
+                    consoleLog('后端返回空配置，使用默认值', 'warn');
+                }
+            } catch (error) {
+                consoleLog('从后端加载配置失败: ' + error.message, 'error');
+            }
+        }
+        
+        async function saveWebsiteConfig(data) {
+            consoleLog('正在保存网站配置到自托管后端...', 'info');
+            try {
+                const response = await fetch(`${AppState.apiBase}/admin-save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        password: AppState.devPassword,
+                        data: data
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    consoleLog('网站配置保存成功', 'info');
+                    return true;
+                } else {
+                    consoleLog('保存失败: ' + result.message, 'error');
+                    return false;
+                }
+            } catch (error) {
+                consoleLog('保存配置时发生网络错误: ' + error.message, 'error');
+                return false;
+            }
+        }
+        
+        async function loadMessagesFromBackend() {
+            consoleLog('正在从自托管后端加载留言...', 'info');
+            try {
+                const response = await fetch(`${AppState.apiBase}/message-list`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    window.messages = result.messages || [];
+                    consoleLog(`加载了 ${window.messages.length} 条留言`, 'info');
+                    if (typeof renderMessages === 'function') {
+                        renderMessages();
+                    }
+                }
+            } catch (error) {
+                consoleLog('加载留言失败: ' + error.message, 'error');
+                window.messages = [];
+            }
+        }
+        
+        async function postMessageToBackend(message) {
+            consoleLog('正在发布留言到自托管后端...', 'info');
+            try {
+                const response = await fetch(`${AppState.apiBase}/message-post`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(message)
+                });
+                
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                consoleLog('发布留言时网络错误: ' + error.message, 'error');
+                return { success: false, error: error.message };
+            }
+        }
+        
+        async function deleteMessageFromBackend(messageId) {
+            consoleLog(`正在从自托管后端删除留言 ${messageId}...`, 'info');
+            try {
+                const response = await fetch(`${AppState.apiBase}/message-delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        password: AppState.devPassword,
+                        messageId: messageId
+                    })
+                });
+                
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                consoleLog('删除留言时网络错误: ' + error.message, 'error');
+                return { success: false, error: error.message };
+            }
+        }
+
+        // ============================== 初始化应用 ==============================
+        async function initApp() {
+            consoleLog('应用初始化开始（自托管版本）', 'info');
+            
+            setupEventListeners();
+            updateConnectionStatus();
+            
+            await Promise.all([
+                loadWebsiteConfig(),
+                loadMessagesFromBackend()
+            ]);
+            
+            initMessageBoard();
+            
+            setTimeout(() => {
+                showMainContent();
+            }, 1500);
+            
+            consoleLog('应用初始化完成', 'info');
+        }
+
+        function showMainContent() {
+            consoleLog('显示主内容', 'info');
+            document.getElementById('loading-screen').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('loading-screen').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+            }, 500);
+        }
+
+        function applyDataToPage(data) {
+            consoleLog('应用数据到页面', 'info');
+            
+            if (data.name) {
+                document.getElementById('name').textContent = data.name;
+                consoleLog('设置名字: ' + data.name, 'info');
+            }
+            
+            if (data.welcome) {
+                document.getElementById('welcome').textContent = data.welcome;
+                consoleLog('设置欢迎语: ' + data.welcome, 'info');
+            }
+            
+            if (data.footer) {
+                document.getElementById('footer-text').textContent = data.footer;
+                consoleLog('设置公告: ' + data.footer, 'info');
+            }
+            
+            if (data.avatar && data.avatar !== '') {
+                consoleLog('设置头像', 'info');
+                document.getElementById('avatar').src = data.avatar;
+            } else {
+                consoleLog('数据中没有头像字段或头像为空', 'warn');
+            }
+            
+            if (data.qqImage) {
+                document.getElementById('qq-image').src = data.qqImage;
+                consoleLog('设置QQ二维码', 'info');
+            }
+            
+            if (data.wechatImage) {
+                document.getElementById('wechat-image').src = data.wechatImage;
+                consoleLog('设置微信二维码', 'info');
+            }
+            
+            if (data.tiktokImage) {
+                document.getElementById('tiktok-image').src = data.tiktokImage;
+                consoleLog('设置抖音二维码', 'info');
+            }
+            
+            if (data.bgImage && data.bgImage !== 'none') {
+                document.body.style.backgroundImage = data.bgImage;
+                document.body.style.backgroundSize = 'cover';
+                document.body.style.backgroundAttachment = 'fixed';
+                document.body.style.backgroundPosition = 'center';
+                consoleLog('设置背景图片', 'info');
+            }
+            
+            if (data.loadingBg && data.loadingBg !== 'none') {
+                document.getElementById('loading-screen').style.backgroundImage = data.loadingBg;
+                consoleLog('设置加载背景', 'info');
+            }
+            
+            if (data.loadingText) {
+                document.getElementById('loading-text').textContent = data.loadingText;
+                consoleLog('设置加载文本: ' + data.loadingText, 'info');
+            }
+            
+            if (data.loadingSubtext) {
+                document.getElementById('loading-subtext').textContent = data.loadingSubtext;
+                consoleLog('设置加载副文本: ' + data.loadingSubtext, 'info');
+            }
+        }
+
+        // ============================== 事件监听 ==============================
+        function setupEventListeners() {
+            // 开发者模式
+            document.getElementById('dev-mode-btn').addEventListener('click', () => {
+                document.getElementById('password-modal').style.display = 'flex';
+            });
+            
+            document.getElementById('password-btn').addEventListener('click', () => {
+                const passwordInput = document.getElementById('password-input');
+                if (passwordInput.value === AppState.devPassword) {
+                    document.getElementById('password-modal').style.display = 'none';
+                    document.getElementById('dev-modal').style.display = 'flex';
+                    loadCurrentData();
+                    passwordInput.value = '';
+                } else {
+                    alert('密码错误，请重试');
+                    passwordInput.value = '';
+                }
+            });
+            
+            // 控制台
+            document.getElementById('console-btn').addEventListener('click', () => {
+                document.getElementById('console-password-modal').style.display = 'flex';
+            });
+            
+            document.getElementById('console-password-btn').addEventListener('click', () => {
+                const passwordInput = document.getElementById('console-password-input');
+                if (passwordInput.value === AppState.devPassword) {
+                    document.getElementById('console-password-modal').style.display = 'none';
+                    document.getElementById('console-modal').style.display = 'flex';
+                    updateConsoleOutput();
+                    passwordInput.value = '';
+                } else {
+                    alert('密码错误，请重试');
+                    passwordInput.value = '';
+                }
+            });
+            
+            // 调试按钮
+            document.getElementById('check-local-data-btn').addEventListener('click', checkLocalData);
+            document.getElementById('check-messages-btn').addEventListener('click', checkMessages);
+            document.getElementById('check-cloud-data-btn').addEventListener('click', checkCloudData);
+            document.getElementById('reset-local-data-btn').addEventListener('click', resetLocalData);
+            
+            // 云端数据管理按钮（已重定向到自托管）
+            document.getElementById('save-to-cloud-btn').addEventListener('click', saveCurrentDataToCloud);
+            document.getElementById('load-from-cloud-btn').addEventListener('click', loadFromCloudAndApply);
+            document.getElementById('clear-cloud-data-btn').addEventListener('click', clearCloudData);
+            
+            // 社交平台
+            document.getElementById('qq-btn').addEventListener('click', () => {
+                document.getElementById('qq-modal').style.display = 'flex';
+            });
+            
+            document.getElementById('wechat-btn').addEventListener('click', () => {
+                document.getElementById('wechat-modal').style.display = 'flex';
+            });
+            
+            document.getElementById('tiktok-btn').addEventListener('click', () => {
+                document.getElementById('tiktok-modal').style.display = 'flex';
+            });
+            
+            // 关闭按钮
+            setupCloseButtons();
+            
+            // 开发者模式功能
+            setupDeveloperFunctions();
+            
+            // 控制台功能
+            setupConsoleFunctions();
+        }
+
+        function setupCloseButtons() {
+            const closeButtons = [
+                'qq-close', 'wechat-close', 'tiktok-close',
+                'password-btn', 'close-dev', 'console-close', 'close-console-btn', 'console-password-btn',
+                'message-board-close', 'user-setup-close', 'cancel-delete-btn'
+            ];
+            
+            closeButtons.forEach(btnId => {
+                document.getElementById(btnId).addEventListener('click', () => {
+                    const modal = document.getElementById(btnId.replace('-close', '-modal').replace('-btn', '-modal'));
+                    if (modal) modal.style.display = 'none';
+                    
+                    if (btnId === 'password-btn') document.getElementById('password-input').value = '';
+                    if (btnId === 'console-password-btn') document.getElementById('console-password-input').value = '';
+                    if (btnId === 'cancel-delete-btn') {
+                        document.getElementById('delete-password-input').value = '';
+                        currentMessageIdToDelete = null;
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        function setupDeveloperFunctions() {
+            const uploadIds = ['qq-upload', 'wechat-upload', 'tiktok-upload', 'bg-upload', 'loading-bg-upload'];
+            uploadIds.forEach(id => {
+                document.getElementById(id).addEventListener('change', (e) => {
+                    const previewId = id.replace('-upload', '-preview');
+                    handleImageUpload(e, previewId);
+                });
+            });
+            
+            document.getElementById('save-btn').addEventListener('click', saveChanges);
+            document.getElementById('change-password-btn').addEventListener('click', changePassword);
+        }
+
+        function setupConsoleFunctions() {
+            document.getElementById('clear-console-btn').addEventListener('click', () => {
+                AppState.consoleLogs = [];
+                updateConsoleOutput();
+            });
+        }
+
+        function updateConsoleOutput() {
+            const consoleOutput = document.getElementById('console-output');
+            if (consoleOutput) {
+                consoleOutput.textContent = AppState.consoleLogs.join('\n');
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
+        }
+
+        // ============================== 开发者模式功能 ==============================
+        function handleImageUpload(event, targetId) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const result = e.target.result;
+                    document.getElementById(targetId).src = result;
+                    consoleLog(`图片已上传到 ${targetId}`, 'info');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function loadCurrentData() {
+            document.getElementById('dev-name').value = document.getElementById('name').textContent;
+            document.getElementById('dev-welcome').value = document.getElementById('welcome').textContent;
+            document.getElementById('dev-footer').value = document.getElementById('footer-text').textContent;
+            document.getElementById('loading-text-input').value = document.getElementById('loading-text').textContent;
+            document.getElementById('loading-subtext-input').value = document.getElementById('loading-subtext').textContent;
+            
+            document.getElementById('qq-preview').src = document.getElementById('qq-image').src;
+            document.getElementById('wechat-preview').src = document.getElementById('wechat-image').src;
+            document.getElementById('tiktok-preview').src = document.getElementById('tiktok-image').src;
+            
+            const bodyBg = document.body.style.backgroundImage;
+            if (bodyBg && bodyBg !== 'none') {
+                document.getElementById('bg-preview').src = bodyBg.slice(5, -2);
+            }
+            
+            const loadingBg = document.getElementById('loading-screen').style.backgroundImage;
+            if (loadingBg && loadingBg !== 'none') {
+                document.getElementById('loading-bg-preview').src = loadingBg.slice(5, -2);
+            }
+        }
+
+        async function saveChanges() {
+            consoleLog('开始保存更改', 'info');
+            
+            const data = {
+                name: document.getElementById('dev-name').value,
+                welcome: document.getElementById('dev-welcome').value,
+                footer: document.getElementById('dev-footer').value,
+                loadingText: document.getElementById('loading-text-input').value,
+                loadingSubtext: document.getElementById('loading-subtext-input').value
+            };
+            
+            // 头像处理
+            const avatarFile = document.getElementById('avatar-upload').files[0];
+            if (avatarFile) {
+                consoleLog('检测到头像文件，正在处理...', 'info');
+                try {
+                    const avatarData = await readFileAsDataURL(avatarFile);
+                    data.avatar = avatarData;
+                    consoleLog('头像文件已处理并添加到数据', 'info');
+                } catch (error) {
+                    consoleLog('处理头像文件时出错: ' + error.message, 'error');
+                }
+            } else {
+                consoleLog('没有检测到头像文件', 'info');
+                const currentAvatar = document.getElementById('avatar').src;
+                if (currentAvatar && currentAvatar !== '' && !currentAvatar.includes(window.location.href)) {
+                    data.avatar = currentAvatar;
+                    consoleLog('保留原头像', 'info');
+                }
+            }
+            
+            // 更新其他图片
+            updateImageFromPreview('qq-image', 'qq-preview', data, 'qqImage');
+            updateImageFromPreview('wechat-image', 'wechat-preview', data, 'wechatImage');
+            updateImageFromPreview('tiktok-image', 'tiktok-preview', data, 'tiktokImage');
+            
+            // 更新背景
+            updateBackgroundFromPreview('bg-preview', document.body, data, 'bgImage');
+            updateBackgroundFromPreview('loading-bg-preview', document.getElementById('loading-screen'), data, 'loadingBg');
+            
+            // 更新页面显示
+            document.getElementById('name').textContent = data.name;
+            document.getElementById('welcome').textContent = data.welcome;
+            document.getElementById('footer-text').textContent = data.footer;
+            document.getElementById('loading-text').textContent = data.loadingText;
+            document.getElementById('loading-subtext').textContent = data.loadingSubtext;
+            
+            if (data.avatar) {
+                document.getElementById('avatar').src = data.avatar;
+                consoleLog('头像已立即更新到页面', 'info');
+            }
+            
+            document.getElementById('dev-modal').style.display = 'none';
+            
+            consoleLog('准备保存数据', 'info');
+            const success = await saveWebsiteConfig(data);
+            
+            if (success) {
+                consoleLog('✅ 更改已保存！', 'info');
+                alert('✅ 更改已保存！');
+            } else {
+                consoleLog('❌ 保存失败', 'error');
+                alert('❌ 保存失败');
+            }
+        }
+
+        function readFileAsDataURL(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function updateImageFromPreview(targetId, previewId, data, dataKey = null) {
+            const preview = document.getElementById(previewId);
+            if (preview.src && !preview.src.startsWith('data:') && preview.src !== window.location.href) {
+                document.getElementById(targetId).src = preview.src;
+                if (dataKey) {
+                    data[dataKey] = preview.src;
+                }
+            } else if (preview.src.startsWith('data:')) {
+                document.getElementById(targetId).src = preview.src;
+                if (dataKey) {
+                    data[dataKey] = preview.src;
+                }
+            }
+        }
+
+        function updateBackgroundFromPreview(previewId, targetElement, data, dataKey) {
+            const preview = document.getElementById(previewId);
+            if (preview.src && !preview.src.startsWith('data:') && preview.src !== window.location.href) {
+                const bgValue = `url(${preview.src})`;
+                targetElement.style.backgroundImage = bgValue;
+                targetElement.style.backgroundSize = 'cover';
+                targetElement.style.backgroundAttachment = 'fixed';
+                targetElement.style.backgroundPosition = 'center';
+                data[dataKey] = bgValue;
+            } else if (preview.src.startsWith('data:')) {
+                const bgValue = `url(${preview.src})`;
+                targetElement.style.backgroundImage = bgValue;
+                targetElement.style.backgroundSize = 'cover';
+                targetElement.style.backgroundAttachment = 'fixed';
+                targetElement.style.backgroundPosition = 'center';
+                data[dataKey] = bgValue;
+            }
+        }
+
+        function changePassword() {
+            const oldPassword = document.getElementById('old-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            
+            if (!oldPassword || !newPassword || !confirmPassword) {
+                alert('请填写所有密码字段');
+                return;
+            }
+            
+            if (oldPassword !== AppState.devPassword) {
+                alert('原密码错误');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                alert('新密码和确认密码不匹配');
+                return;
+            }
+            
+            AppState.devPassword = newPassword;
+            localStorage.setItem('devPassword', AppState.devPassword);
+            
+            document.getElementById('old-password').value = '';
+            document.getElementById('new-password').value = '';
+            document.getElementById('confirm-password').value = '';
+            
+            alert('密码更改成功！');
+        }
+
+        // ============================== 留言板功能 ==============================
+        function initMessageBoard() {
+            consoleLog('初始化留言板', 'info');
+            
+            loadUserInfo();
+            setupMessageBoardEvents();
+        }
+        
+        function loadUserInfo() {
+            try {
+                const userInfo = JSON.parse(localStorage.getItem('miaochanUserInfo') || '{}');
+                if (userInfo && userInfo.name) {
+                    currentUser.avatar = userInfo.avatar || '';
+                    currentUser.name = userInfo.name;
+                    updateUserDisplay();
+                    consoleLog('用户信息加载成功', 'info');
+                } else {
+                    consoleLog('没有找到用户信息', 'info');
+                }
+            } catch (error) {
+                consoleLog('加载用户信息失败: ' + error.message, 'error');
+            }
+        }
+        
+        function updateUserDisplay() {
+            const avatarElement = document.getElementById('current-user-avatar');
+            const nameElement = document.getElementById('current-user-name');
+            
+            if (currentUser.avatar && currentUser.avatar !== '') {
+                avatarElement.src = currentUser.avatar;
+            } else {
+                avatarElement.src = '';
+            }
+            
+            if (currentUser.name) {
+                nameElement.textContent = currentUser.name;
+            } else {
+                nameElement.textContent = '未设置';
+            }
+            
+            consoleLog('用户显示已更新: ' + currentUser.name, 'info');
+        }
+        
+        function setupMessageBoardEvents() {
+            // 留言板按钮
+            document.getElementById('message-board-btn').addEventListener('click', () => {
+                document.getElementById('message-board-modal').style.display = 'flex';
+                cancelReply();
+            });
+            
+            // 用户设置按钮
+            document.getElementById('user-setup-btn').addEventListener('click', () => {
+                document.getElementById('user-setup-modal').style.display = 'flex';
+                loadUserSetupForm();
+            });
+            
+            // 头像上传
+            document.getElementById('user-avatar-btn').addEventListener('click', () => {
+                document.getElementById('user-avatar-upload').click();
+            });
+            
+            document.getElementById('user-avatar-upload').addEventListener('change', (e) => {
+                handleImageUpload(e, 'user-avatar-preview');
+            });
+            
+            // 保存用户信息
+            document.getElementById('save-user-info-btn').addEventListener('click', function(e) {
+                e.preventDefault();
+                saveUserInfo();
+            });
+            
+            // 留言图片上传
+            document.getElementById('message-image-btn').addEventListener('click', () => {
+                document.getElementById('message-image-upload').click();
+            });
+            
+            document.getElementById('message-image-upload').addEventListener('change', (e) => {
+                handleMessageImageUpload(e);
+            });
+            
+            // 发布留言
+            document.getElementById('submit-message-btn').addEventListener('click', function(e) {
+                e.preventDefault();
+                submitMessage();
+            });
+            
+            // 取消回复
+            document.getElementById('cancel-reply-btn').addEventListener('click', cancelReply);
+            
+            // 删除确认
+            document.getElementById('confirm-delete-btn').addEventListener('click', confirmDeleteMessage);
+        }
+        
+        function loadUserSetupForm() {
+            const previewElement = document.getElementById('user-avatar-preview');
+            const nameInput = document.getElementById('user-name-input');
+            
+            if (currentUser.avatar && currentUser.avatar !== '') {
+                previewElement.src = currentUser.avatar;
+            } else {
+                previewElement.src = '';
+            }
+            
+            nameInput.value = currentUser.name || '';
+            consoleLog('用户设置表单已加载', 'info');
+        }
+        
+        function saveUserInfo() {
+            consoleLog('开始保存用户信息', 'info');
+            
+            const avatarPreview = document.getElementById('user-avatar-preview');
+            const nameInput = document.getElementById('user-name-input');
+            
+            if (!nameInput.value.trim()) {
+                alert('请输入昵称');
+                return;
+            }
+            
+            let avatarSrc = avatarPreview.src;
+            consoleLog('头像预览URL: ' + avatarSrc, 'info');
+            
+            if (!avatarSrc || avatarSrc === window.location.href || avatarSrc === '') {
+                avatarSrc = '';
+                consoleLog('用户未设置有效头像，使用空值', 'info');
+            }
+            
+            currentUser.avatar = avatarSrc;
+            currentUser.name = nameInput.value.trim();
+            
+            consoleLog('准备保存用户信息到本地存储', 'info');
+            
+            try {
+                if (typeof(Storage) === "undefined") {
+                    throw new Error('本地存储不可用');
+                }
+                
+                localStorage.setItem('miaochanUserInfo', JSON.stringify(currentUser));
+                
+                const savedData = localStorage.getItem('miaochanUserInfo');
+                if (!savedData) {
+                    throw new Error('保存后无法读取数据');
+                }
+                
+                consoleLog('用户信息已成功保存到本地存储', 'info');
+            } catch (error) {
+                consoleLog('保存用户信息到本地存储失败: ' + error.message, 'error');
+                alert('保存失败: ' + error.message + '。请检查浏览器设置或尝试使用其他浏览器。');
+                return;
+            }
+            
+            updateUserDisplay();
+            
+            document.getElementById('user-setup-modal').style.display = 'none';
+            
+            alert('用户信息已保存！');
+            consoleLog('用户信息保存完成: ' + currentUser.name, 'info');
+        }
+        
+        function handleMessageImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const result = e.target.result;
+                    const previewContainer = document.getElementById('message-image-preview');
+                    previewContainer.innerHTML = `<img src="${result}" alt="图片预览" style="max-width: 100%; max-height: 80px; object-fit: contain; border-radius: 5px; border: var(--border);">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        function startReply(messageId, username) {
+            consoleLog('开始回复，消息ID: ' + messageId + ', 用户名: ' + username, 'info');
+            
+            AppState.isReplying = true;
+            AppState.replyingTo = {
+                id: messageId,
+                username: username
+            };
+            
+            document.getElementById('reply-indicator-text').textContent = `正在回复：${username}`;
+            document.getElementById('reply-indicator').style.display = 'flex';
+            document.getElementById('message-text').placeholder = `回复 ${username}...`;
+            document.getElementById('message-text').focus();
+            
+            consoleLog('回复状态已设置', 'info');
+        }
+        
+        function cancelReply() {
+            AppState.isReplying = false;
+            AppState.replyingTo = null;
+            
+            document.getElementById('reply-indicator').style.display = 'none';
+            document.getElementById('message-text').placeholder = '请输入留言内容...';
+            
+            consoleLog('回复状态已取消', 'info');
+        }
+        
+        async function submitMessage() {
+            const now = Date.now();
+            const timeSinceLastMessage = now - AppState.lastMessageTime;
+            if (timeSinceLastMessage < 20000) {
+                const remainingTime = Math.ceil((20000 - timeSinceLastMessage) / 1000);
+                alert(`发言过于频繁，请等待 ${remainingTime} 秒后再试`);
+                return;
+            }
+            
+            if (AppState.isSubmittingMessage) {
+                consoleLog('留言正在提交中，请勿重复提交', 'warn');
+                return;
+            }
+            
+            if (!currentUser.name) {
+                alert('请先设置头像和昵称');
+                document.getElementById('user-setup-modal').style.display = 'flex';
+                return;
+            }
+            
+            const messageText = document.getElementById('message-text').value.trim();
+            const imagePreviewElement = document.getElementById('message-image-preview');
+            const imagePreview = imagePreviewElement.querySelector('img');
+            
+            if (!messageText && !imagePreview) {
+                alert('请输入留言内容或添加图片');
+                return;
+            }
+            
+            AppState.isSubmittingMessage = true;
+            const submitBtn = document.getElementById('submit-message-btn');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '发布中...';
+            submitBtn.disabled = true;
+            
+            try {
+                consoleLog('开始提交留言，回复状态: ' + AppState.isReplying, 'info');
+                if (AppState.isReplying) {
+                    await submitReply(messageText, imagePreview);
+                } else {
+                    await submitNewMessage(messageText, imagePreview);
+                }
+                
+                AppState.lastMessageTime = Date.now();
+            } catch (error) {
+                consoleLog('提交留言时发生错误: ' + error.message, 'error');
+            } finally {
+                AppState.isSubmittingMessage = false;
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+        
+        async function submitNewMessage(messageText, imagePreview) {
+            const message = {
+                userId: generateUserId(),
+                avatar: currentUser.avatar || '',
+                username: currentUser.name,
+                content: messageText,
+                image: imagePreview ? imagePreview.src : '',
+                timestamp: new Date().toISOString(),
+                replies: []
+            };
+            
+            message.id = generateMessageId();
+            window.messages.unshift(message);
+            
+            localStorage.setItem('miaochanMessages', JSON.stringify(window.messages));
+            renderMessages();
+            
+            document.getElementById('message-text').value = '';
+            document.getElementById('message-image-preview').innerHTML = '';
+            document.getElementById('message-image-upload').value = '';
+            
+            consoleLog('留言已发布', 'info');
+            
+            try {
+                const result = await postMessageToBackend(message);
+                if (result.success) {
+                    message.id = result.messageId;
+                    consoleLog('留言已保存到后端', 'info');
+                } else {
+                    consoleLog('留言保存到后端失败，已保存到本地', 'warn');
+                }
+            } catch (error) {
+                consoleLog('留言保存到后端失败，已保存到本地', 'warn');
+            }
+        }
+        
+        async function submitReply(messageText, imagePreview) {
+            consoleLog('开始发布回复，回复对象: ' + JSON.stringify(AppState.replyingTo), 'info');
+            
+            const reply = {
+                id: generateMessageId(),
+                userId: generateUserId(),
+                avatar: currentUser.avatar || '',
+                username: currentUser.name,
+                content: messageText,
+                timestamp: new Date().toISOString()
+            };
+            
+            const messageIndex = window.messages.findIndex(msg => msg.id === AppState.replyingTo.id);
+            consoleLog('查找留言，消息ID: ' + AppState.replyingTo.id + ', 找到的索引: ' + messageIndex, 'info');
+            
+            if (messageIndex !== -1) {
+                if (!window.messages[messageIndex].replies) {
+                    window.messages[messageIndex].replies = [];
+                }
+                window.messages[messageIndex].replies.push(reply);
+                
+                localStorage.setItem('miaochanMessages', JSON.stringify(window.messages));
+                renderMessages();
+                cancelReply();
+                
+                document.getElementById('message-text').value = '';
+                document.getElementById('message-image-preview').innerHTML = '';
+                document.getElementById('message-image-upload').value = '';
+                
+                consoleLog('回复已发布', 'info');
+                
+                try {
+                    const updateData = {
+                        id: window.messages[messageIndex].id,
+                        parentId: window.messages[messageIndex].id,
+                        userId: currentUser.avatar ? generateUserId() : 'guest',
+                        username: currentUser.name,
+                        content: messageText,
+                        avatar: currentUser.avatar || ''
+                    };
+                    
+                    const result = await postMessageToBackend(updateData);
+                    if (result.success) {
+                        consoleLog('回复已保存到后端', 'info');
+                    } else {
+                        consoleLog('回复保存到后端失败，已保存到本地', 'warn');
+                    }
+                } catch (error) {
+                    consoleLog('回复保存到后端失败，已保存到本地', 'warn');
+                }
+            } else {
+                consoleLog('未找到要回复的留言', 'error');
+                alert('回复失败：未找到要回复的留言');
+            }
+        }
+        
+        function generateMessageId() {
+            return 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+        
+        function generateUserId() {
+            let userId = localStorage.getItem('miaochanUserId');
+            if (!userId) {
+                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('miaochanUserId', userId);
+            }
+            return userId;
+        }
+        
+        function renderMessages() {
+            const messageList = document.getElementById('message-list');
+            messageList.innerHTML = '';
+            
+            if (!window.messages || window.messages.length === 0) {
+                messageList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">暂无留言，快来发表第一条留言吧！</p>';
+                return;
+            }
+            
+            window.messages.forEach(message => {
+                const messageElement = createMessageElement(message);
+                messageList.appendChild(messageElement);
+            });
+        }
+        
+        function createMessageElement(message) {
+            const messageItem = document.createElement('div');
+            messageItem.className = 'message-item';
+            messageItem.id = `message-${message.id}`;
+            
+            const timeString = formatTime(message.timestamp);
+            const isOwnMessage = message.userId === generateUserId();
+            
+            messageItem.innerHTML = `
+                <div class="message-header">
+                    <img src="${message.avatar || ''}" alt="用户头像" class="message-avatar">
+                    <div class="message-username">${escapeHtml(message.username)}</div>
+                    <div class="message-time">${timeString}</div>
+                </div>
+                <div class="message-bubble ${isOwnMessage ? 'message-own' : 'message-other'}">
+                    <div class="message-content">${escapeHtml(message.content)}</div>
+                    ${message.image ? `<img src="${message.image}" alt="留言图片" class="message-image">` : ''}
+                </div>
+                <div class="message-actions-bar">
+                    <button class="reply-btn" data-message-id="${message.id}" data-username="${escapeHtml(message.username)}">
+                        <i class="fas fa-reply"></i>
+                        <span>回复</span>
+                    </button>
+                    <button class="delete-btn" data-message-id="${message.id}">
+                        <i class="fas fa-trash"></i>
+                        <span>删除</span>
+                    </button>
+                </div>
+                <div class="reply-area">
+                    <div class="reply-list" id="reply-list-${message.id}">
+                        ${renderReplies(message.replies)}
+                    </div>
+                </div>
+            `;
+            
+            const replyBtn = messageItem.querySelector('.reply-btn');
+            const deleteBtn = messageItem.querySelector('.delete-btn');
+            
+            replyBtn.addEventListener('click', () => {
+                const username = replyBtn.getAttribute('data-username');
+                consoleLog('点击回复按钮，消息ID: ' + message.id + ', 用户名: ' + username, 'info');
+                startReply(message.id, username);
+            });
+            deleteBtn.addEventListener('click', () => openDeleteConfirm(message.id));
+            
+            return messageItem;
+        }
+        
+        function renderReplies(replies) {
+            if (!replies || replies.length === 0) {
+                return '';
+            }
+            
+            return replies.map(reply => {
+                const timeString = formatTime(reply.timestamp);
+                return `
+                    <div class="reply-item">
+                        <div class="reply-header">
+                            <img src="${reply.avatar || ''}" alt="用户头像" class="reply-avatar">
+                            <div class="reply-username">${escapeHtml(reply.username)}</div>
+                            <div class="reply-time">${timeString}</div>
+                        </div>
+                        <div class="reply-bubble">
+                            <div class="reply-content">${escapeHtml(reply.content)}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function openDeleteConfirm(messageId) {
+            currentMessageIdToDelete = messageId;
+            document.getElementById('delete-confirm-modal').style.display = 'flex';
+            document.getElementById('delete-password-input').value = '';
+        }
+        
+        async function confirmDeleteMessage() {
+            const passwordInput = document.getElementById('delete-password-input');
+            if (passwordInput.value === AppState.devPassword) {
+                const messageIndex = window.messages.findIndex(msg => msg.id === currentMessageIdToDelete);
+                if (messageIndex !== -1) {
+                    const messageId = window.messages[messageIndex].id;
+                    window.messages.splice(messageIndex, 1);
+                    
+                    localStorage.setItem('miaochanMessages', JSON.stringify(window.messages));
+                    renderMessages();
+                    
+                    consoleLog('留言已删除', 'info');
+                    
+                    try {
+                        const result = await deleteMessageFromBackend(messageId);
+                        if (result.success) {
+                            consoleLog('留言已从后端删除', 'info');
+                        } else {
+                            consoleLog('从后端删除留言失败，已从本地删除', 'warn');
+                        }
+                    } catch (error) {
+                        consoleLog('从后端删除留言失败，已从本地删除', 'warn');
+                    }
+                }
+                
+                document.getElementById('delete-confirm-modal').style.display = 'none';
+                currentMessageIdToDelete = null;
+            } else {
+                alert('密码错误，请重试');
+                passwordInput.value = '';
+            }
+        }
+
+        // ============================== 数据管理功能 ==============================
+        async function saveCurrentDataToCloud() {
+            const data = {
+                name: document.getElementById('dev-name').value,
+                welcome: document.getElementById('dev-welcome').value,
+                footer: document.getElementById('dev-footer').value,
+                loadingText: document.getElementById('loading-text-input').value,
+                loadingSubtext: document.getElementById('loading-subtext-input').value
+            };
+            
+            const avatarFile = document.getElementById('avatar-upload').files[0];
+            if (avatarFile) {
+                try {
+                    const avatarData = await readFileAsDataURL(avatarFile);
+                    data.avatar = avatarData;
+                } catch (error) {
+                    consoleLog('处理头像文件时出错: ' + error.message, 'error');
+                }
+            } else {
+                const currentAvatar = document.getElementById('avatar').src;
+                if (currentAvatar && currentAvatar !== '' && !currentAvatar.includes(window.location.href)) {
+                    data.avatar = currentAvatar;
+                }
+            }
+            
+            updateImageFromPreview('qq-image', 'qq-preview', data, 'qqImage');
+            updateImageFromPreview('wechat-image', 'wechat-preview', data, 'wechatImage');
+            updateImageFromPreview('tiktok-image', 'tiktok-preview', data, 'tiktokImage');
+            
+            updateBackgroundFromPreview('bg-preview', document.body, data, 'bgImage');
+            updateBackgroundFromPreview('loading-bg-preview', document.getElementById('loading-screen'), data, 'loadingBg');
+            
+            const success = await saveWebsiteConfig(data);
+            
+            if (success) {
+                alert('数据已成功上传！');
+            } else {
+                alert('上传失败！');
+            }
+        }
+        
+        async function loadFromCloudAndApply() {
+            try {
+                await loadWebsiteConfig();
+                alert('已加载数据！');
+            } catch (error) {
+                alert('加载数据失败！');
+            }
+        }
+        
+        async function clearCloudData() {
+            if (confirm('确定要清空所有数据吗？此操作不可逆！')) {
+                try {
+                    const emptyData = {
+                        name: "喵ちゃん",
+                        welcome: "欢迎访问我的个人主页",
+                        footer: "这里可以放置个人简介或其他内容...",
+                        loadingText: "正在加载...",
+                        loadingSubtext: "请稍候"
+                    };
+                    
+                    const success = await saveWebsiteConfig(emptyData);
+                    
+                    if (success) {
+                        window.messages = [];
+                        localStorage.setItem('miaochanMessages', JSON.stringify([]));
+                        renderMessages();
+                        
+                        alert('数据已清空！');
+                        location.reload();
+                    }
+                } catch (error) {
+                    alert('清空数据失败！');
+                }
+            }
+        }
+        
+        // ============================== 调试函数 ==============================
+        function checkLocalData() {
+            consoleLog('检查本地数据...', 'info');
+            const data = JSON.parse(localStorage.getItem('miaochanData') || '{}');
+            
+            if (Object.keys(data).length === 0) {
+                consoleLog('没有找到本地数据', 'warn');
+            } else {
+                consoleLog('本地数据内容:', 'info');
+                Object.keys(data).forEach(key => {
+                    if (data[key]) {
+                        consoleLog(`- ${key}: ${data[key]}`, 'info');
+                    }
+                });
+            }
+        }
+        
+        function checkMessages() {
+            consoleLog('检查留言数据...', 'info');
+            
+            if (!window.messages || window.messages.length === 0) {
+                consoleLog('没有留言数据', 'warn');
+            } else {
+                consoleLog(`找到 ${window.messages.length} 条留言:`, 'info');
+                window.messages.forEach((msg, index) => {
+                    consoleLog(`${index + 1}. ${msg.username}: ${msg.content.substring(0, 50)}...`, 'info');
+                });
+            }
+        }
+        
+        async function checkCloudData() {
+            consoleLog('检查后端数据...', 'info');
+            
+            try {
+                const response = await fetch(`${AppState.apiBase}/admin-load`);
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && result.data) {
+                        consoleLog('后端配置数据:', 'info');
+                        Object.keys(result.data).forEach(key => {
+                            if (result.data[key]) {
+                                consoleLog(`- ${key}: ${result.data[key]}`, 'info');
+                            }
+                        });
+                    } else {
+                        consoleLog('后端没有配置数据', 'warn');
+                    }
+                }
+                
+                const msgResponse = await fetch(`${AppState.apiBase}/message-list`);
+                if (msgResponse.ok) {
+                    const msgResult = await msgResponse.json();
+                    if (msgResult.success && msgResult.messages) {
+                        consoleLog(`后端有 ${msgResult.messages.length} 条留言`, 'info');
+                    } else {
+                        consoleLog('后端没有留言数据', 'warn');
+                    }
+                }
+            } catch (error) {
+                consoleLog('检查后端数据失败: ' + error.message, 'error');
+            }
+        }
+        
+        function resetLocalData() {
+            if (confirm('确定要重置所有本地数据吗？这将清除所有本地设置和留言！')) {
+                localStorage.removeItem('miaochanData');
+                localStorage.removeItem('miaochanMessages');
+                localStorage.removeItem('miaochanUserInfo');
+                localStorage.removeItem('miaochanUserId');
+                
+                consoleLog('本地数据已重置', 'info');
+                alert('本地数据已重置，页面将重新加载');
+                location.reload();
+            }
+        }
+        
+        // ============================== 工具函数 ==============================
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) {
+                return '刚刚';
+            } else if (diff < 3600000) {
+                return Math.floor(diff / 60000) + '分钟前';
+            } else if (diff < 86400000) {
+                return Math.floor(diff / 3600000) + '小时前';
+            } else {
+                return date.toLocaleDateString();
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ============================== 启动应用 ==============================
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
