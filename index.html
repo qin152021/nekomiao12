@@ -1262,26 +1262,48 @@
         
         async function saveWebsiteConfig(data) {
             consoleLog('正在保存网站配置到自托管后端...', 'info');
+            consoleLog('发送的数据大小:', JSON.stringify(data).length, 'bytes', 'info');
+            consoleLog('密码:', AppState.devPassword ? '已设置(' + AppState.devPassword.substring(0, 3) + '...)' : '未设置', 'info');
+            
             try {
+                const requestData = {
+                    password: AppState.devPassword,
+                    data: data
+                };
+                
+                consoleLog('完整的请求数据字段:', Object.keys(requestData), 'info');
+                
                 const response = await fetch(`${AppState.apiBase}/admin-save`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        password: AppState.devPassword,
-                        data: data
-                    })
+                    body: JSON.stringify(requestData)
                 });
                 
-                const result = await response.json();
+                consoleLog('响应状态:', response.status, response.statusText, 'info');
+                
+                const responseText = await response.text();
+                consoleLog('响应内容:', responseText, 'info');
+                
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                    consoleLog('JSON解析成功:', result, 'info');
+                } catch(e) {
+                    consoleLog('响应不是有效的JSON: ' + e.message, 'error');
+                    return false;
+                }
+                
                 if (result.success) {
                     consoleLog('网站配置保存成功', 'info');
                     return true;
                 } else {
-                    consoleLog('保存失败: ' + result.message, 'error');
+                    consoleLog('保存失败: ' + (result.message || '未知错误'), 'error');
+                    if (result.error) consoleLog('详细错误:', result.error, 'error');
                     return false;
                 }
             } catch (error) {
                 consoleLog('保存配置时发生网络错误: ' + error.message, 'error');
+                consoleLog('错误堆栈:', error.stack, 'error');
                 return false;
             }
         }
@@ -1665,7 +1687,7 @@
                 alert('✅ 更改已保存！');
             } else {
                 consoleLog('❌ 保存失败', 'error');
-                alert('❌ 保存失败');
+                alert('❌ 保存失败，请查看控制台获取详细信息');
             }
         }
 
@@ -2224,42 +2246,71 @@
 
         // ============================== 数据管理功能 ==============================
         async function saveCurrentDataToCloud() {
-            const data = {
-                name: document.getElementById('dev-name').value,
-                welcome: document.getElementById('dev-welcome').value,
-                footer: document.getElementById('dev-footer').value,
-                loadingText: document.getElementById('loading-text-input').value,
-                loadingSubtext: document.getElementById('loading-subtext-input').value
-            };
+            consoleLog('开始上传数据到云端...', 'info');
             
-            const avatarFile = document.getElementById('avatar-upload').files[0];
-            if (avatarFile) {
-                try {
-                    const avatarData = await readFileAsDataURL(avatarFile);
-                    data.avatar = avatarData;
-                } catch (error) {
-                    consoleLog('处理头像文件时出错: ' + error.message, 'error');
+            try {
+                // 收集所有配置数据
+                const data = {
+                    name: document.getElementById('dev-name').value,
+                    welcome: document.getElementById('dev-welcome').value,
+                    footer: document.getElementById('dev-footer').value,
+                    loadingText: document.getElementById('loading-text-input').value,
+                    loadingSubtext: document.getElementById('loading-subtext-input').value
+                };
+                
+                // 检查是否有头像文件
+                const avatarFile = document.getElementById('avatar-upload').files[0];
+                if (avatarFile) {
+                    consoleLog('检测到头像文件，处理中...', 'info');
+                    try {
+                        const avatarData = await readFileAsDataURL(avatarFile);
+                        // 检查大小，如果太大则警告
+                        if (avatarData.length > 10000) {
+                            consoleLog('头像文件较大，注意可能上传失败', 'warn');
+                        }
+                        data.avatar = avatarData;
+                    } catch (error) {
+                        consoleLog('头像处理失败: ' + error.message, 'error');
+                    }
+                } else {
+                    // 如果没有新头像，保留当前头像
+                    const currentAvatar = document.getElementById('avatar').src;
+                    if (currentAvatar && currentAvatar !== '' && !currentAvatar.includes(window.location.href)) {
+                        data.avatar = currentAvatar;
+                        consoleLog('使用当前头像', 'info');
+                    }
                 }
-            } else {
-                const currentAvatar = document.getElementById('avatar').src;
-                if (currentAvatar && currentAvatar !== '' && !currentAvatar.includes(window.location.href)) {
-                    data.avatar = currentAvatar;
+                
+                // 更新其他图片
+                updateImageFromPreview('qq-image', 'qq-preview', data, 'qqImage');
+                updateImageFromPreview('wechat-image', 'wechat-preview', data, 'wechatImage');
+                updateImageFromPreview('tiktok-image', 'tiktok-preview', data, 'tiktokImage');
+                
+                // 更新背景
+                updateBackgroundFromPreview('bg-preview', document.body, data, 'bgImage');
+                updateBackgroundFromPreview('loading-bg-preview', document.getElementById('loading-screen'), data, 'loadingBg');
+                
+                consoleLog('准备上传的数据字段:', Object.keys(data), 'info');
+                consoleLog('数据大小:', JSON.stringify(data).length, 'bytes', 'info');
+                
+                // 调用 saveWebsiteConfig 保存数据
+                const success = await saveWebsiteConfig(data);
+                
+                if (success) {
+                    consoleLog('✅ 数据上传成功', 'info');
+                    alert('数据已成功上传！');
+                } else {
+                    consoleLog('❌ 数据上传失败', 'error');
+                    alert('上传失败！请查看控制台获取详细信息。');
                 }
-            }
-            
-            updateImageFromPreview('qq-image', 'qq-preview', data, 'qqImage');
-            updateImageFromPreview('wechat-image', 'wechat-preview', data, 'wechatImage');
-            updateImageFromPreview('tiktok-image', 'tiktok-preview', data, 'tiktokImage');
-            
-            updateBackgroundFromPreview('bg-preview', document.body, data, 'bgImage');
-            updateBackgroundFromPreview('loading-bg-preview', document.getElementById('loading-screen'), data, 'loadingBg');
-            
-            const success = await saveWebsiteConfig(data);
-            
-            if (success) {
-                alert('数据已成功上传！');
-            } else {
-                alert('上传失败！');
+                
+                return success;
+                
+            } catch (error) {
+                consoleLog('上传数据时发生错误: ' + error.message, 'error');
+                consoleLog('错误堆栈:', error.stack, 'error');
+                alert('上传失败：' + error.message);
+                return false;
             }
         }
         
